@@ -1,4 +1,4 @@
-const CACHE_NAME = 'custom-notify-v1';
+const CACHE_NAME = 'custom-notify-v2';
 const ASSETS = [
   './',
   './index.html',
