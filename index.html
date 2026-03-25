@@ -14,10 +14,11 @@
             font-family: system-ui, -apple-system, sans-serif;
             background-color: var(--bg); color: var(--text);
             display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0;
+            padding: 10px; box-sizing: border-box;
         }
         .container {
             background: var(--card); padding: 2rem; border-radius: 16px;
-            width: 90%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.4);
+            width: 100%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.4);
         }
         h1 { font-size: 1.8rem; margin: 0 0 1.5rem; color: var(--accent); text-align: center; }
         .field { margin-bottom: 1rem; }
@@ -35,6 +36,9 @@
         }
         button:active { transform: scale(0.96); }
         .status { font-size: 0.85rem; margin-top: 15px; text-align: center; color: var(--accent); min-height: 1.2rem; }
+        
+        /* Стили для скрытия/показа поля URL иконки */
+        #custom-icon-url-field { display: none; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -50,6 +54,16 @@
     <div class="field">
         <label>Сообщение</label>
         <textarea id="body" rows="2" placeholder="Пустое сообщение"></textarea>
+    </div>
+
+    <div class="field">
+        <label>Иконка</label>
+        <select id="icon-type" onchange="toggleIconUrlField()">
+            <option value="default">По умолчанию</option>
+            <option value="standard">Стандартный колокольчик</option>
+            <option value="custom">Своя (по ссылке)</option>
+        </select>
+        <input type="text" id="custom-icon-url" placeholder="Вставьте URL иконки (png/jpg)">
     </div>
 
     <div class="row">
@@ -78,10 +92,38 @@
 </div>
 
 <script>
+    // URL стандартной иконки (колокольчик)
+    const STANDARD_ICON_URL = 'https://cdn-icons-png.flaticon.com/512/1827/1827347.png';
+
     // Регистрация Service Worker для PWA
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js')
             .then(() => console.log("SW Registered"));
+    }
+
+    // Показывает или скрывает поле для ввода URL, если выбрана кастомная иконка
+    function toggleIconUrlField() {
+        const iconType = document.getElementById('icon-type').value;
+        const customUrlField = document.getElementById('custom-icon-url');
+        if (iconType === 'custom') {
+            customUrlField.style.display = 'block';
+        } else {
+            customUrlField.style.display = 'none';
+        }
+    }
+
+    // Определяет URL иконки на основе выбора пользователя
+    function getIconUrl() {
+        const iconType = document.getElementById('icon-type').value;
+        const customUrl = document.getElementById('custom-icon-url').value;
+
+        if (iconType === 'standard') {
+            return STANDARD_ICON_URL;
+        } else if (iconType === 'custom' && customUrl.trim() !== '') {
+            return customUrl;
+        }
+        // Для 'default' возвращаем null, чтобы браузер использовал стандарт
+        return null;
     }
 
     async function handleNotify() {
@@ -90,6 +132,7 @@
         const delay = parseInt(document.getElementById('delay').value);
         const duration = parseInt(document.getElementById('duration').value);
         const status = document.getElementById('status');
+        const iconUrl = getIconUrl();
 
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
@@ -104,14 +147,21 @@
         setTimeout(async () => {
             const reg = await navigator.serviceWorker.getRegistration();
             if (reg) {
-                const n = await reg.showNotification(title, {
+                // Опции уведомления
+                const options = {
                     body: body,
-                    icon: 'https://cdn-icons-png.flaticon.com/512/1827/1827347.png',
-                    badge: 'https://cdn-icons-png.flaticon.com/512/1827/1827347.png',
                     vibrate: [200, 100, 200],
                     requireInteraction: duration === 0,
                     tag: 'custom-notify-tag'
-                });
+                };
+
+                // Добавляем иконку и badge, если они определены
+                if (iconUrl) {
+                    options.icon = iconUrl;
+                    options.badge = iconUrl; // Иконка в статус-баре (для Android лучше передавать ту же)
+                }
+
+                const n = await reg.showNotification(title, options);
 
                 // Если нужно закрыть через время
                 if (duration > 0) {
