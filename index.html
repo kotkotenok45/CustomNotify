@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Custom Notify</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
     <style>
         :root {
             --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --accent: #38bdf8;
@@ -14,104 +16,112 @@
             display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0;
         }
         .container {
-            background: var(--card); padding: 2rem; border-radius: 12px;
-            width: 100%; max-width: 450px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3);
+            background: var(--card); padding: 2rem; border-radius: 16px;
+            width: 90%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.4);
         }
-        h1 { font-size: 1.5rem; margin-top: 0; color: var(--accent); text-align: center; }
-        .field { margin-bottom: 1.2rem; }
-        label { display: block; margin-bottom: 0.5rem; font-size: 0.85rem; font-weight: 600; }
+        h1 { font-size: 1.8rem; margin: 0 0 1.5rem; color: var(--accent); text-align: center; }
+        .field { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.5rem; font-size: 0.85rem; opacity: 0.8; }
         input, textarea, select {
             width: 100%; padding: 12px; background: #334155; border: 1px solid #475569;
-            border-radius: 8px; color: white; box-sizing: border-box; outline: none;
+            border-radius: 10px; color: white; box-sizing: border-box; outline: none; font-size: 1rem;
         }
         input:focus { border-color: var(--accent); }
-        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         button {
-            width: 100%; padding: 14px; background: var(--accent); border: none;
-            border-radius: 8px; color: var(--bg); font-weight: bold; cursor: pointer;
-            font-size: 1rem; transition: transform 0.1s, opacity 0.2s;
+            width: 100%; padding: 15px; background: var(--accent); border: none;
+            border-radius: 10px; color: var(--bg); font-weight: bold; cursor: pointer;
+            font-size: 1rem; margin-top: 10px; transition: transform 0.1s;
         }
-        button:active { transform: scale(0.98); }
-        .status { font-size: 0.8rem; margin-top: 10px; text-align: center; color: var(--accent); height: 1rem; }
+        button:active { transform: scale(0.96); }
+        .status { font-size: 0.85rem; margin-top: 15px; text-align: center; color: var(--accent); min-height: 1.2rem; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Ghost Notifier</h1>
+    <h1>Custom Notify</h1>
     
     <div class="field">
         <label>Заголовок</label>
-        <input type="text" id="title" placeholder="Пусто">
+        <input type="text" id="title" placeholder="Без заголовка">
     </div>
 
     <div class="field">
-        <label>Текст сообщения</label>
-        <textarea id="body" rows="2" placeholder="Пусто"></textarea>
+        <label>Сообщение</label>
+        <textarea id="body" rows="2" placeholder="Пустое сообщение"></textarea>
     </div>
 
     <div class="row">
         <div class="field">
-            <label>Отправить через</label>
+            <label>Таймер (через)</label>
             <select id="delay">
-                <option value="0">Прямо сейчас</option>
-                <option value="5000">5 секунд</option>
-                <option value="30000">30 секунд</option>
-                <option value="60000">1 минута</option>
-                <option value="300000">5 минут</option>
+                <option value="0">Сейчас</option>
+                <option value="5000">5 сек</option>
+                <option value="30000">30 сек</option>
+                <option value="60000">1 мин</option>
+                <option value="300000">5 мин</option>
             </select>
         </div>
         <div class="field">
-            <label>Исчезнет через</label>
+            <label>Жизнь (сек)</label>
             <select id="duration">
-                <option value="0">Вечно (по умолч.)</option>
-                <option value="3000">3 секунды</option>
-                <option value="7000">7 секунд</option>
-                <option value="15000">15 секунд</option>
+                <option value="0">Вечно</option>
+                <option value="5000">5 сек</option>
+                <option value="15000">15 сек</option>
             </select>
         </div>
     </div>
 
-    <button onclick="scheduleNotification()">Запланировать</button>
+    <button onclick="handleNotify()">Создать уведомление</button>
     <div id="status" class="status"></div>
 </div>
 
 <script>
-    async function scheduleNotification() {
+    // Регистрация Service Worker для PWA
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+            .then(() => console.log("SW Registered"));
+    }
+
+    async function handleNotify() {
         const title = document.getElementById('title').value || " ";
         const body = document.getElementById('body').value || "";
         const delay = parseInt(document.getElementById('delay').value);
         const duration = parseInt(document.getElementById('duration').value);
-        const statusEl = document.getElementById('status');
+        const status = document.getElementById('status');
 
-        // Проверка разрешений
-        if (Notification.permission !== "granted") {
-            const permission = await Notification.requestPermission();
-            if (permission !== "granted") {
-                alert("Разрешите уведомления в настройках браузера!");
-                return;
-            }
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            alert('Разрешите уведомления!');
+            return;
         }
 
         if (delay > 0) {
-            statusEl.innerText = `Уведомление будет отправлено через ${delay/1000} сек...`;
+            status.innerText = `Придет через ${delay/1000} сек...`;
         }
 
-        // Логика таймера отправки
-        setTimeout(() => {
-            const n = new Notification(title, {
-                body: body,
-                icon: "https://cdn-icons-png.flaticon.com/512/1827/1827347.png",
-                tag: "custom-notification", // Чтобы новые не наслаивались, если нужно
-                requireInteraction: duration === 0 // Если "вечно", просим систему не прятать
-            });
+        setTimeout(async () => {
+            const reg = await navigator.serviceWorker.getRegistration();
+            if (reg) {
+                const n = await reg.showNotification(title, {
+                    body: body,
+                    icon: 'https://cdn-icons-png.flaticon.com/512/1827/1827347.png',
+                    badge: 'https://cdn-icons-png.flaticon.com/512/1827/1827347.png',
+                    vibrate: [200, 100, 200],
+                    requireInteraction: duration === 0,
+                    tag: 'custom-notify-tag'
+                });
 
-            statusEl.innerText = "";
-
-            // Логика таймера удаления (если не "вечно")
-            if (duration > 0) {
-                setTimeout(() => n.close(), duration);
+                // Если нужно закрыть через время
+                if (duration > 0) {
+                    setTimeout(async () => {
+                        const notifications = await reg.getNotifications({tag: 'custom-notify-tag'});
+                        notifications.forEach(n => n.close());
+                    }, duration);
+                }
             }
+            status.innerText = "";
         }, delay);
     }
 </script>
