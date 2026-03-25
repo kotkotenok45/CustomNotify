@@ -7,123 +7,53 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
     <style>
-        :root {
-            --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --accent: #38bdf8;
-        }
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background-color: var(--bg); color: var(--text);
-            display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0;
-            padding: 10px; box-sizing: border-box;
-        }
-        .container {
-            background: var(--card); padding: 2rem; border-radius: 16px;
-            width: 100%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.4);
-        }
+        :root { --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --accent: #38bdf8; }
+        body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 15px; box-sizing: border-box; }
+        .container { background: var(--card); padding: 2rem; border-radius: 20px; width: 100%; max-width: 400px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
         h1 { font-size: 1.8rem; margin: 0 0 1.5rem; color: var(--accent); text-align: center; }
         .field { margin-bottom: 1rem; }
         label { display: block; margin-bottom: 0.5rem; font-size: 0.85rem; opacity: 0.8; }
-        input, textarea, select {
-            width: 100%; padding: 12px; background: #334155; border: 1px solid #475569;
-            border-radius: 10px; color: white; box-sizing: border-box; outline: none; font-size: 1rem;
-        }
+        input, textarea, select { width: 100%; padding: 12px; background: #334155; border: 1px solid #475569; border-radius: 12px; color: white; box-sizing: border-box; outline: none; font-size: 1rem; }
         input:focus { border-color: var(--accent); }
         .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        button {
-            width: 100%; padding: 15px; background: var(--accent); border: none;
-            border-radius: 10px; color: var(--bg); font-weight: bold; cursor: pointer;
-            font-size: 1rem; margin-top: 10px; transition: transform 0.1s;
-        }
-        button:active { transform: scale(0.96); }
+        button { width: 100%; padding: 16px; background: var(--accent); border: none; border-radius: 12px; color: var(--bg); font-weight: bold; cursor: pointer; font-size: 1rem; margin-top: 10px; }
+        #custom-icon-url { display: none; margin-top: 10px; }
         .status { font-size: 0.85rem; margin-top: 15px; text-align: center; color: var(--accent); min-height: 1.2rem; }
-        
-        /* Стили для скрытия/показа поля URL иконки */
-        #custom-icon-url-field { display: none; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>Custom Notify</h1>
-    
-    <div class="field">
-        <label>Заголовок</label>
-        <input type="text" id="title" placeholder="Без заголовка">
-    </div>
-
-    <div class="field">
-        <label>Сообщение</label>
-        <textarea id="body" rows="2" placeholder="Пустое сообщение"></textarea>
-    </div>
+    <div class="field"><label>Заголовок</label><input type="text" id="title" placeholder="Без заголовка"></div>
+    <div class="field"><label>Сообщение</label><textarea id="body" rows="2" placeholder="Пустое сообщение"></textarea></div>
 
     <div class="field">
         <label>Иконка</label>
-        <select id="icon-type" onchange="toggleIconUrlField()">
-            <option value="default">По умолчанию</option>
-            <option value="standard">Стандартный колокольчик</option>
-            <option value="custom">Своя (по ссылке)</option>
+        <select id="icon-type" onchange="const f=document.getElementById('custom-icon-url'); f.style.display=(this.value==='custom'?'block':'none')">
+            <option value="none">Без иконки (стандарт)</option>
+            <option value="bell">Колокольчик</option>
+            <option value="custom">Своя (ссылка)</option>
         </select>
-        <input type="text" id="custom-icon-url" placeholder="Вставьте URL иконки (png/jpg)">
+        <input type="text" id="custom-icon-url" placeholder="URL иконки (png/jpg)">
     </div>
 
     <div class="row">
-        <div class="field">
-            <label>Таймер (через)</label>
-            <select id="delay">
-                <option value="0">Сейчас</option>
-                <option value="5000">5 сек</option>
-                <option value="30000">30 сек</option>
-                <option value="60000">1 мин</option>
-                <option value="300000">5 мин</option>
-            </select>
-        </div>
-        <div class="field">
-            <label>Жизнь (сек)</label>
-            <select id="duration">
-                <option value="0">Вечно</option>
-                <option value="5000">5 сек</option>
-                <option value="15000">15 сек</option>
-            </select>
-        </div>
+        <div class="field"><label>Таймер</label><select id="delay"><option value="0">Сейчас</option><option value="5000">5 сек</option><option value="30000">30 сек</option></select></div>
+        <div class="field"><label>Жизнь</label><select id="duration"><option value="0">Вечно</option><option value="5000">5 сек</option><option value="15000">15 сек</option></select></div>
     </div>
-
     <button onclick="handleNotify()">Создать уведомление</button>
     <div id="status" class="status"></div>
 </div>
 
 <script>
-    // URL стандартной иконки (колокольчик)
-    const STANDARD_ICON_URL = 'https://cdn-icons-png.flaticon.com/512/1827/1827347.png';
-
-    // Регистрация Service Worker для PWA
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js')
-            .then(() => console.log("SW Registered"));
-    }
-
-    // Показывает или скрывает поле для ввода URL, если выбрана кастомная иконка
-    function toggleIconUrlField() {
-        const iconType = document.getElementById('icon-type').value;
-        const customUrlField = document.getElementById('custom-icon-url');
-        if (iconType === 'custom') {
-            customUrlField.style.display = 'block';
-        } else {
-            customUrlField.style.display = 'none';
-        }
-    }
-
-    // Определяет URL иконки на основе выбора пользователя
-    function getIconUrl() {
-        const iconType = document.getElementById('icon-type').value;
-        const customUrl = document.getElementById('custom-icon-url').value;
-
-        if (iconType === 'standard') {
-            return STANDARD_ICON_URL;
-        } else if (iconType === 'custom' && customUrl.trim() !== '') {
-            return customUrl;
-        }
-        // Для 'default' возвращаем null, чтобы браузер использовал стандарт
-        return null;
+        navigator.serviceWorker.register('sw.js').then(reg => {
+            reg.onupdatefound = () => {
+                const nw = reg.installing;
+                nw.onstatechange = () => { if (nw.state === 'installed') location.reload(); };
+            };
+        });
     }
 
     async function handleNotify() {
@@ -131,43 +61,30 @@
         const body = document.getElementById('body').value || "";
         const delay = parseInt(document.getElementById('delay').value);
         const duration = parseInt(document.getElementById('duration').value);
+        const type = document.getElementById('icon-type').value;
+        const customUrl = document.getElementById('custom-icon-url').value;
         const status = document.getElementById('status');
-        const iconUrl = getIconUrl();
 
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted') {
-            alert('Разрешите уведомления!');
-            return;
-        }
+        let icon = null;
+        if(type === 'bell') icon = 'https://cdn-icons-png.flaticon.com/512/1827/1827347.png';
+        if(type === 'custom' && customUrl) icon = customUrl;
 
-        if (delay > 0) {
-            status.innerText = `Придет через ${delay/1000} сек...`;
-        }
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') return alert('Дай разрешение!');
+
+        if (delay > 0) status.innerText = `Ждем ${delay/1000} сек...`;
 
         setTimeout(async () => {
             const reg = await navigator.serviceWorker.getRegistration();
             if (reg) {
-                // Опции уведомления
-                const options = {
-                    body: body,
-                    vibrate: [200, 100, 200],
-                    requireInteraction: duration === 0,
-                    tag: 'custom-notify-tag'
-                };
-
-                // Добавляем иконку и badge, если они определены
-                if (iconUrl) {
-                    options.icon = iconUrl;
-                    options.badge = iconUrl; // Иконка в статус-баре (для Android лучше передавать ту же)
-                }
-
-                const n = await reg.showNotification(title, options);
-
-                // Если нужно закрыть через время
+                const options = { body, vibrate: [200, 100, 200], requireInteraction: duration === 0, tag: 'cn' };
+                if (icon) { options.icon = icon; options.badge = icon; }
+                
+                await reg.showNotification(title, options);
                 if (duration > 0) {
                     setTimeout(async () => {
-                        const notifications = await reg.getNotifications({tag: 'custom-notify-tag'});
-                        notifications.forEach(n => n.close());
+                        const ns = await reg.getNotifications({tag: 'cn'});
+                        ns.forEach(n => n.close());
                     }, duration);
                 }
             }
@@ -175,6 +92,5 @@
         }, delay);
     }
 </script>
-
 </body>
 </html>
